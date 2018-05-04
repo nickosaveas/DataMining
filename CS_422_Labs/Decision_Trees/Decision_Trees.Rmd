@@ -1,0 +1,228 @@
+---
+title: "CS 422 Section 02"
+output: html_notebook
+author: Nicholas Saveas
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CS 422 HW 2 Practicum Problems
+
+## Decision Tree Classification
+
+### 2.1-a
+```{r 2.1-a}
+set.seed(1122)
+setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/Data_Mining/Decision_Trees/")
+train <- read.csv("adult-train.csv")
+test <- read.csv("adult-test.csv")
+
+# This is a really lame way to clean the date but it's effective
+train <- train[train$occupation != "?", ]
+train <- train[train$native_country != "?", ]
+
+test <- test[test$occupation != "?", ]
+test <- test[test$native_country != "?", ]
+
+head(train)
+```
+
+### 2.1-b
+```{r 2.1-b setup}
+library(rpart)
+library(caret)
+library(rpart.plot)
+library(ROCR)
+```
+```{r 2.1-b code}
+model <- rpart( income ~ .,method = "class", data = train)
+rpart.plot(model, main = "Rpart on Adult Data", type = 4, fallen.leaves = T)
+summary(model)
+```
+
+i) The three most important predictors are, in order, relatoinship, marial_status, and capital_gain.
+ii) The first split is done on relationship. The first node has a default class of <=50k with a split of 0.751 to 0.249.
+
+### 2.1-c
+```{r 2.1-c}
+pred <- predict(model, test, type="class")
+confusionMatrix(pred, test[, 15])
+```
+i) The balanced accuracy is 0.726
+ii) The balanced error rate is 1 - 0.726 = 0.274
+iii) Sensitivity = 0.948, Specificity = 0.504
+
+### 2.1-c-iv
+This code is direectly from the diabetes.Rmd file Professor Gurbani provided for us. I only changed the variable that is being graphed.
+```{r AUC ROC}
+# ROC curve
+pred.rocr <- predict(model, newdata=test, type="prob")[,2]
+f.pred <- prediction(pred.rocr, test$income)
+f.perf <- performance(f.pred, "tpr", "fpr")
+plot(f.perf, colorize=T, lwd=3)
+abline(0,1)
+auc <- performance(f.pred, measure = "auc")
+cat(paste("The area under curve (AUC) for this model is ", round(auc@y.values[[1]], 3)))
+```
+
+### 2.1-d
+```{r 2.1-d}
+cpx=model$cptable[which.min(model$cptable[,"xerror"]), "CP"]
+cpx
+
+# ptree <- prune(model, cp=cpx)
+# rpart.plot(ptree, main = "Rpart on Adult Data", type = 4, fallen.leaves = T)
+
+# ptree.pred <- predict(ptree, test, type="class")
+# confusionMatrix(ptree.pred, test[, 15])
+```
+The complexity of the tree is alreayd very low (max of three splits) and pruning it to that level of complexity does not change the tree at all. There just isnt that much to prune. 
+
+### 2.1-e
+i) There are 22653 positive class observations (<=50k) and 7508 negative class observations (>50k)
+```{r 2.1-e ii}
+# Get all observations of negative class
+newTrainA <- train[train$income == ">50K", ]
+
+# Get the observations with the positive class but only the number of rows in newTrainA
+newTrainB <- train[sample(which(train$income == "<=50K"), nrow(newTrainA)), ]
+newTrain <- rbind(newTrainA, newTrainB)
+
+newModel <- rpart( income ~ .,method = "class", data = newTrain)
+newPred <- predict(newModel, test, type="class")
+confusionMatrix(newPred, test[, 15])
+```
+i) The balanced accuracy is 0.804
+ii) The balanced error rate is 1 - 0.804 = 0.196
+iii) Sensitivity = 0.773, Specificity = 0.834
+
+###2.1-e-iv
+```{r AUC ROC 2}
+# ROC curve
+pred.rocr <- predict(newModel, newdata=test, type="prob")[,2]
+f.pred <- prediction(pred.rocr, test$income)
+f.perf <- performance(f.pred, "tpr", "fpr")
+plot(f.perf, colorize=T, lwd=3)
+abline(0,1)
+auc <- performance(f.pred, measure = "auc")
+cat(paste("The area under curve (AUC) for this model is ", round(auc@y.values[[1]], 3)))
+```
+
+## Random Forest
+
+### 2.2-a
+
+```{r 2.2-a}
+library(randomForest)
+set.seed(1122)
+model <- randomForest(income ~ ., data=train, importance=TRUE)
+pred <- predict(model, test, type="class")
+confusionMatrix(pred, test[, 15])
+```
+i) The balanced accuracy is 0.632
+ii) The accuracy is 0.818
+iii) Sensitivity = 0.997, Specificity = 0.267
+
+```{r 2.2-a-iv}
+summary(test)
+```
+iv) There 11360 positive class observations (<=50k) and 3700 negative class observations (>50K). 
+v) The sensitivity is so high because there are a lot of positive class observations to train on - the test data distribution doesn't determine how the model deciedes whether something is positive or negative. But because there are a lot of positive observations to train on the model wrongly classified a bunch of false positives, lowering the specificity.
+
+```{r 2.1-vi}
+varImpPlot(model)
+```
+vi) For MeanDescreaseAccuracy, the most important variable is capital_gain because it gives us 120 accurate classifications. It seems that native_country actually helps classify less than 0 observations so it must be the least important.
+vi) For MeanDescreaseGini, the most important variable is relationship because splitting on relationship gives us the most information gain. Race is the least important because it gives us the least information gain - the gini index of the nodes after the split is close to the gini index before the split.
+
+```{r}
+print(model)
+```
+vii) There are three variables tried at each split
+
+
+### 2.2-b
+```{r 2.2-b1}
+set.seed(1122)
+mtry <- tuneRF(train[, 1:14], train$income, ntreeTry=500, stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+print(mtry)
+```
+i) The default number of predictors was three
+ii) The optimal value of mtry suggested by the method was 2
+
+```{r 2.2-b2}
+library(randomForest)
+set.seed(1122)
+model <- randomForest(income ~ ., data=train, importance=TRUE, mtry=2)
+pred <- predict(model, test, type="class")
+confusionMatrix(pred, test[, 15])
+```
+1) The balanced accuracy is 0.638
+2) The accuracy of the model is 0.821
+3) Sensitivity = 0.997, Specificity = 0.280
+
+```{r 2.2-b3}
+varImpPlot(model)
+```
+4) Once again capital_gain is the most important predictor in terms of gini index and accuracy. Also native_country is still the least important predictor in MeanDescreaseAccuracy and race is the least important predictor in MeanDescreaseGini
+
+iv) As expected, because of the lower OOB error rate, the new model did better or equal in every aspect of performance. The variable importance is still the same as well.
+
+## Association Rules
+
+### 2.3-i
+
+```{r}
+library(arules)
+trans <- read.transactions("groceries.csv")
+rules <- apriori(trans)
+```
+i) The original apriori() method gave me 0 rules
+
+```{r}
+rules <- apriori(trans, parameter = list(supp=0.0006))
+```
+ii) With a minsup of 0.0006 I can get 485 rules, 0.0007 gives me a little less than 400
+
+### 2.3-iii
+```{r}
+summary(trans)
+```
+iii) I don't believe that the most frequently bought item is "bags vegetables," so it must just be "bags" with a count of 971
+
+### 2.3-iv
+```{r}
+frequencies <- itemFrequency(trans, type="absolute")
+frequencies <- sort(frequencies, decreasing = FALSE)
+```
+
+iv) The least frequent item is artif at 1 purchase.
+
+### 2.3-v
+```{r}
+rules <- sort(rules, decreasing = TRUE, na.last = NA, by = "support")
+inspect(rules[1:5])
+```
+
+
+### 2.3-vi
+```{r}
+rules <- sort(rules, decreasing = TRUE, na.last = NA, by = "confidence")
+inspect(rules[1:5])
+```
+
+### 2.3-vii
+```{r}
+rules <- sort(rules, decreasing = FALSE, na.last = NA, by = "support")
+inspect(rules[1:5])
+```
+
+
+### 2.3-viii
+```{r}
+rules <- sort(rules, decreasing = FALSE, na.last = NA, by = "confidence")
+inspect(rules[1:5])
+```
+

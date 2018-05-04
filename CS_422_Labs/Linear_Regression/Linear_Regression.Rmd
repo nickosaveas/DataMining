@@ -1,0 +1,168 @@
+---
+title: "CS 422 Section 02"
+output: html_notebook
+author: Nicholas Saveas
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Practicum Problems
+
+## Problem 2.1: College Data Set
+
+### A)
+```{r 2.1-a}
+setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/Data_Mining/Linear_Regression/")
+college <- read.csv("College.csv")
+```
+
+### B)
+```{r 2.1-b}
+rownames(college) <- college[,1]
+fix(college)
+```
+```{r}
+college <- college [ , -1]
+fix(college)
+```
+
+### C)
+```{r 2.1-c-i}
+summary(college)
+```
+
+### 2.2-c-ii
+```{r 2.1-c-ii}
+pairs(college[,1:10])
+```
+
+### 2.2-c-iii
+Which alumni donate more to their colleges --- those who go to public schools or those who go to private schools?
+```{r 2.1-c-iii}
+boxplot(perc.alumni~Private, data=college, main = 'Public vs Private Donations', xlab = 'Private school alumn', ylab = 'Percentage of alumni who donate')
+```
+
+
+Which colleges -public or private --- employ more Ph.D's?
+
+### 2.2-c-iv
+```{r 2.1-c-iv}
+boxplot(PhD~Private, data=college, main = 'Public vs Private Ph.D. employment rate', xlab = 'Private school', ylab = "Percentage of faculty with ph.D.'s")
+```
+
+### 2.2-c-v
+```{r 2.1-c-v}
+Elite <- rep("No", nrow(college))
+Elite[college$Top10perc > 50] <- "Yes"
+Elite <- as.factor(Elite)
+college <- data.frame(college, Elite)
+summary(Elite)
+```
+
+### 2.2-c-vi
+```{r 2.1-c-vi}
+par(mfrow=c(2,2))
+hist(college$Apps, main = 'Number of Applicants Frequency', xlab = 'Number of Applications')
+hist(college$Top25perc, main = 'Top 25% Frequency', xlab = 'Percentage of Top 25%')
+hist(college$Room.Board, main = 'Room and Board Prices', xlab = 'Price')
+hist(college$S.F.Ratio, main = 'Student Faculty Ratio Histogram', xlab = 'Student Faculty Ratio')
+```
+
+### 2.2-c-extra
+```{r}
+par(mfrow=c(1,2))
+boxplot(PhD~Elite, data=college, main = 'Elite Ph.D. employment %', xlab = 'Elite school', ylab = "Percentage of faculty with ph.D.'s")
+boxplot(Expend~Elite, data=college, main = 'Elite Spending Rate', xlab = 'Elite School', ylab = 'Instructional expenditure per student')
+```
+
+Based on these two graphs we can determine what makes an elite college so prestegious. For one, they, on average, employ more faculty with Ph.D.'s. On top of that, they often spend more (> 10000) than non elite school. They have the talent and the money to be successful universities.
+
+## Problem 2.2: Linear Regression
+
+### 2.2-a
+
+I believe that Field goals should be the attribute most correlated to Points Scored, simply because Field Goals are the most common way to score points in basketball.
+
+```{r 2.2-a}
+nba <- read.csv("nba.csv")
+summary(nba)
+FG_PTS <- lm(PTS~FG, data=nba)
+summary(FG_PTS)
+```
+
+The model tells me that for ever Field Goal the points should go up by 2.55 and that PTS should start at 0.59, but since there is only one predictor it accounts for the lack of free throws and three pointers. An average of 3.86 FG's were made and an average of 10.45 PTS were made, which should be an average of  (2.55 * 3.86) + 0.588 = 10.431. The model overestimates the value of a Field Goal but it fits the model very well.
+
+### 2.2-b
+```{r 2.2-b}
+scatter.smooth(x=nba$FG, y=nba$PTS, main = "PTS ~ FG", xlab = 'Field Goals', ylab = 'Points Scored')
+```
+
+### 2.2-seed
+```{r 2.2-seed}
+set.seed(1122)
+index <- sample(1:nrow(nba), 250)
+train <- nba[index, ]
+test <- nba[-index, ]
+summary(train)
+```
+
+### 2.2-c
+```{r 2.2-c}
+regressors <- data.frame(train$FG, train$FGA, train$X3P, train$X3PA, train$FT, train$FTA, train$TOT, train$TO, train$A, train$ST, train$BL, train$PTS)
+psych::corr.test(regressors)
+```
+
+After looking at the data I felt that Field Goals, Free Throws, and Three Pointers were the most approriate regressors. Field Goal Attempts would have been a redundant addition depsite the high correlation -> more attempts = more field goals. *I changed the model to be a little more interesting because I had a perfect fit model - I wanted to see how factors other than Field Goals could affect the score.
+
+### 2.2-d
+```{r 2.2-d}
+multiModel <- lm(PTS ~ TOT + X3P + FT, data=train)
+summary(multiModel)
+```
+
+I am very happy with this model - everything is statiscally significant and the R squared value isn't terrible. It explains around 72% of the variance. Plugging in a lot of averages from the training data set, I get (0.6 * 4.39) + (2.97 * 0.97) + (1.59 * 1.81) + 2.22 = 10.61, which is close to the real mean of 10.45. The F-Statistic is very high, which tells me again that my model is significant.
+
+### 2.2-e
+```{r}
+multiModelRes = resid(multiModel)
+plot(train$PTS, multiModelRes, ylab = 'Residuals',
+     xlab = 'Points Scored', main = 'Points Scored Residuals')
+abline(-4,0.45)
+```
+I drew a line that sort of represents the shape of the residual - It's a positively sloped line. 
+
+### 2.2-f
+```{r}
+hist(multiModelRes, xlab = 'Residual', main = 'Histogram of Residuals',
+     breaks = c(-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20 ))
+```
+This is a right skewed graph, but it mostly follows a gaussian curve. 
+
+### 2.2-g
+```{r}
+predict <- predict(multiModel, test)
+predict <- data.frame(predict, test$PTS)
+as.data.frame(table(predict$predict == predict$test.PTS))
+```
+
+### 2.2-h
+```{r}
+residuals <- predict$test.PTS - predict$predict
+RSS <- sum(residuals^2)
+
+TSS <- residuals - (sum(residuals/19))
+TSS <- sum(TSS^2)
+
+fSTAT <- ((TSS - RSS) / 0.05) / (RSS / (19 - 0.05 - 1))
+
+RSE <- sqrt(RSS / (19 - 0.05 - 1))
+
+print(paste("RSS:", RSS))
+print(paste("TSS:", TSS))
+print(paste("F-Statistic (p = 0.05):", fSTAT))
+print(paste("RSE:", RSE))
+
+```
+There is something wrong with the f-statistic.
