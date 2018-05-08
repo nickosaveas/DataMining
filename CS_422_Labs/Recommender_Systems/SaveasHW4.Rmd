@@ -1,0 +1,257 @@
+---
+title: "CS 422 Section 02"
+output: html_notebook
+author: Nicholas Saveas
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CS 422 HW 4 Practicum Problems
+
+## Exercise 2.1 Locality Sensitive Hashing
+
+```{r setup 2}
+path <- "C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/HW4/hw4.movies"
+setwd(path)
+files <- list.files(path, full.names=T)
+```
+
+### Exercise 2.1-a
+```{r 2.1-a-setup}
+library(textreuse)
+corpus <- TextReuseCorpus(files, tokenizer = tokenize_ngrams, n = 5, keep_tokens = TRUE)
+```
+```{r 2.1-a-dimensions}
+corpus
+shingles <- unique(tokens(corpus))
+sum <- 0
+for (i in 1:length(shingles))
+{
+  sum <- sum +length(shingles[[i]])
+}
+sum
+```
+There are 671 documents (columns) and 409564 shingles (rows)
+
+
+### Exercise 2.1-b
+```{r 2.1-b setup}
+d <- corpus[['user20']]
+d$content
+tokens(d)[1:5]
+```
+The user has rated 98 movies and the five tokens are "toy story 1995 twelve monkeys"   "story 1995 twelve monkeys a.k.a"  "1995 twelve monkeys a.k.a 12"    "twelve monkeys a.k.a 12 monkeys"   "monkeys a.k.a 12 monkeys 1995" 
+
+### Exercise 2.1-c
+```{r 2.1-c TAKES A LONG TIME}
+bruteForce.nope <- pairwise_candidates(pairwise_compare(corpus, jaccard_similarity))
+```
+I renamed the variable so that if I accidentally ran this code again it wouldnt override what I had previously
+```{r 2.1-c analysis}
+which(bruteForce$score >= 0.6)
+which(bruteForce$score >= 0.5)
+which(bruteForce$score >= 0.4)
+```
+i) There are no pairs of users with similarity score of at least 0.60.
+ii) There are no pairs of users with similarity score of at least 0.50.
+iii) There are 4 pairs of users with similarity score of at least 0.40.
+
+```{r 2.1-c printing}
+bruteForce[37448, ]
+bruteForce[63329, ]
+bruteForce[63547, ]
+bruteForce[84236, ]
+```
+
+iv) The pairs are {user151, user 369}, {user191, user317}, {user191, user513}, {user225, user 375}.
+
+### Exercise 2.1-d
+```{r 2.1-d-i setup}
+lsh_probability(h=18, b=9, s=0.6)
+minhash <- minhash_generator(n=18, seed=100)
+```
+i) Anything lower than h=18 and b=9 will cause the probably to be lower than 0.98.
+
+```{r 2.1-d-i redo}
+corpus.hashed <- TextReuseCorpus(files, tokenizer = tokenize_ngrams, n = 5, minhash_func = minhash, keep_tokens = TRUE)
+```
+```{r 2.1-d-ii analysis}
+d.hashed <- corpus.hashed[['user20']]
+minhashes(d.hashed)[1:5]
+```
+ii) listed above are the first five minhashes
+
+### Exercise 2.1-e
+```{r 2.1-e-i setup}
+buckets <- lsh(corpus.hashed, bands = 9)
+candidates <- lsh_candidates(buckets)
+res <- lsh_compare(candidates, corpus.hashed, jaccard_similarity)
+```
+i) I expect to find candidate pairs that have a jaccard similarity between 0.6 and 0.5.
+```{r 2.1-e-i}
+which(res$score >= 0.5 && res$score <= 0.6)
+```
+i) Unfortunately, no such candidate pairs exist. They dont because they didn't exist in the brute force method. LSH just makes it easier to find the pairs - it doesn't change the numbers.
+
+```{r 2.1-e-ii}
+which(res$score >= 0.40)
+res[177, ]
+res[272, ]
+res[367, ]
+```
+ii) The pairs of users are {user151, user369}, {user191, user513}, {user225, user375}.
+
+iii) The pairs are mostly the same, except with the LSH method one pair is missing.
+
+iv) ((224,785 - 959) / 224,785 ) * 100) => Avoided 99.57% of the work using LSH.
+
+## Exercise 2.2
+
+### Exercise 2.2-a
+
+```{r setup 3}
+setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/HW4/")
+```
+
+This sets up how the movie profiles will be structured
+```{r 2.2 movie setup}
+movies.csv <- read.csv("./exercise2.1/movies.csv", sep=",", stringsAsFactors = FALSE)
+
+library(stringdist)
+
+movies.df <- data.frame(matrix(ncol = 20, nrow = 0))
+y <- c("Action", "Adventure", "Animation", "Children", "Comedy", "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror", "IMAX", "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western", "(no genres listed)")
+colnames(movies.df)<- y
+```
+This populates the values in the movie database
+```{r 2.2 building movie profile}
+for(i in 1:9125)
+{
+  row <- movies.csv[i, ]
+  row.add <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  genres <- strsplit(row$genres, "\\|")
+  for (j in genres)
+  {
+      index <- 0
+      index <- amatch(j, y, nomatch=20)
+      row.add[index] = 1
+  }
+  movies.df[nrow(movies.df) + 1,] = row.add
+}
+```
+
+This code sets up reading the user profile
+```{r 2.2 user setup}
+20374237 %% 671
+library(readtext)
+user664.txt <- readLines("./hw4.movies/user664.txt")
+
+user664.df <- data.frame(matrix(ncol = 20, nrow = 0))
+colnames(user664.df)<- y
+```
+
+
+```{r building user profile}
+for (i in user664.txt)
+{
+  index <- amatch(i, movies.csv$title, maxDist = 4.0)
+  row.add <- movies.df[index, ]
+  user664.df[nrow(user664.df) + 1,] = row.add
+}
+```
+
+This is the most disgusting code Ive ever written
+```{r 2.2 disgusting}
+movieNumber <- nrow(user664.df)
+user664 <- vector(mode = "numeric")
+
+user664[1] = (sum(user664.df$Action)) / movieNumber
+user664[2] = (sum(user664.df$Adventure)) / movieNumber
+user664[3] = (sum(user664.df$Animation)) / movieNumber
+user664[4] = (sum(user664.df$Children)) / movieNumber
+user664[5] = (sum(user664.df$Comedy)) / movieNumber
+user664[6] = (sum(user664.df$Crime)) / movieNumber
+user664[7] = (sum(user664.df$Documentary)) / movieNumber
+user664[8] = (sum(user664.df$Drama)) / movieNumber
+user664[9] = (sum(user664.df$Fantasy)) / movieNumber
+user664[10] = (sum(user664.df$`Film-Noir`)) / movieNumber
+
+user664[11] = (sum(user664.df$Horror)) / movieNumber
+user664[12] = (sum(user664.df$IMAX)) / movieNumber
+user664[13] = (sum(user664.df$Musical)) / movieNumber
+user664[14] = (sum(user664.df$Mystery)) / movieNumber
+user664[15] = (sum(user664.df$Romance)) / movieNumber
+user664[16] = (sum(user664.df$`Sci-Fi`)) / movieNumber
+user664[17] = (sum(user664.df$Thriller)) / movieNumber
+user664[18] = (sum(user664.df$War)) / movieNumber
+user664[19] = (sum(user664.df$Western)) / movieNumber
+user664[20] = (sum(user664.df$`(no genres listed)`)) / movieNumber
+
+user664
+```
+
+```{r 2.2 recommender}
+library(lsa)
+indecies <- sample((1:9125), 10)
+
+samples.df <- data.frame(matrix(ncol = 20, nrow = 0))
+colnames(samples.df) <- y
+
+movieIDs <- vector(mode = "numeric")
+movieTitles <- vector(mode = "character")
+index <- 1
+
+
+```
+
+```{r}
+cosine.df <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(cosine.df) <- c("movieId", "title", "similarity")
+row.add <- c("0", "0", "0")
+
+for(i in indecies)
+{
+  movieIDs[index] <- (movies.csv[i, 1])
+  movieTitles[index] <- (movies.csv[i, 2])
+  
+  samples.df[nrow(samples.df) + 1,] = movies.df[indecies[index], ]
+  index <- index + 1
+}
+
+for(i in 1:10)
+{
+  vector <- as.vector(samples.df[i, ], mode="numeric")
+  row.add = c(movieIDs[i], movieTitles[i], cosine(user664, vector))
+  cosine.df[nrow(cosine.df) + 1,] = row.add
+}
+
+cosine.df <- cosine.df[order(cosine.df$similarity), ]
+
+print(paste("For user ID 664, the following movies are recommended:"))
+for(i in 10:6)
+{
+  print(paste(cosine.df[i, ]))
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+## Including Plots
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
