@@ -1,0 +1,262 @@
+---
+title: "CS 422 Section 02"
+output: html_notebook
+author: Nicholas Saveas
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+# CS 422 HW 3 Practicum Problems
+
+## Exercise 2.1-a
+
+#### Exercise 2.1-a-i
+I don't want to remove any of the attributes - I think they are all valuable pieces of information.
+
+#### Exercise 2.1-a-ii
+I don't think the attributes should be standardized because they all have the same unit: amount of teeth.
+
+#### Exercise 2.1-a-iii
+See archive for file19.csv
+```{r 2.1-a-iii}
+setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/HW3/")
+mammals.df <- read.csv("file19.csv", sep=",", header=T, comment.char = "#", row.names = 1)
+```
+
+## Exercise 2.1-b
+
+#### 2.1-b-i
+```{r 2.1-b-i}
+library(cluster)
+library(ggplot2)
+library(factoextra)
+
+fviz_nbclust(mammals.df, FUNcluster = kmeans, method = "wss")
+```
+
+#### 2.1-b-ii
+```{r 2.1-b-ii}
+mammals.k <- kmeans(mammals.df, centers=7, nstart=25)
+fviz_cluster(mammals.k, data=mammals.df)
+```
+
+#### 2.1-b-iii
+```{r 2.1-b-iii}
+mammals.k$size
+```
+Cluster 1: 19 // Cluster 2: 2 // Cluster 3: 10 // Cluster 4: 17 // Cluster 5: 8 // Cluster 6: 9 // Cluster 7: 1
+
+#### 2.1-b-iv
+```{r 2.1-b-iv}
+mammals.k$totss
+```
+
+#### 2.1-b-v
+```{r 2.1-b-v}
+mammals.k$withinss
+```
+Cluster 1: 23.47 // Cluster 2: 3.00 // Cluster 3: 21.10 // Cluster 4: 20.71 // Cluster 5: 6.38 // Cluster 6: 1.56 // Cluster 7: 0.00\n
+
+#### 2.1-b-vi
+```{r 2.1-b-vi}
+for (number in c(1,2,3,4,5,6,7)) {
+  print(paste(which(mammals.k$cluster == number)))
+}
+
+mammals.df
+```
+I think its interesting that most of the indicies are consecutive, which leads me to believe that the points are clustered mostly correctly - assuming that the data was entered in some order that thought about the types of mammals. The first couple of indicies are only moles and then there are bats, etc. Some animals are probaly misplaced but overall it seems correct.\n
+
+Also the points within their cluster - at least the points you can read - seem to have some relationship with each other.
+
+## Exercise 2.2
+
+#### Exercise 2.2-a
+
+```{r 2.2-a}
+languages.df <- read.csv("file46.csv", sep=",", header=T, comment.char = "#", row.names = 1)
+```
+```{r 2.2-a clustering}
+languages.single <- eclust(languages.df, FUNcluster = "hclust", hc_method = "single")
+languages.complete <- eclust(languages.df, FUNcluster = "hclust", hc_method = "complete")
+languages.average <- eclust(languages.df, FUNcluster = "hclust", hc_method = "average")
+```
+```{r 2.2-a graphing}
+fviz_dend(languages.single, main = "Cluster Single", cex = 0.4, label_cols = "black")
+fviz_dend(languages.complete, main = "Cluster Complete", cex = 0.4, label_cols = "black")
+fviz_dend(languages.average, main = "Cluster Average", cex = 0.4, label_cols = "black")
+```
+#### Exercise 2.2-b
+Cluster Single: {Great-Britain, Ireland}, {West,Germany, Austria}, {Luxembourg, Switzerland}, {France, Belgium}, {Denmark, Norway}
+
+Cluster Complete: {West,Germany, Austria}, {Luxembourg, Switzerland}, {Denmark, Norway}, {Great-Britain, Ireland}, {France, Belgium}
+
+Cluster Average: {Portugal, Spain}, {West,Germany, Austria}, {Luxembourg, Switzerland}, {France, Belgium}, {Denmark, Norway}, {Great-Britain, Ireland}
+
+#### Exercise 2.2-c
+I think the single and average linkage strategy places Italy better than the complete linkage strategy because Italy is the only country with an Italian percentage above 25%. It makes sense that the country with no real relationship to the other countries is grouped into a large diverse cluster than a smaller closely-related cluster.
+
+#### Exercise 2.2-d
+Based on this heuristic of purity, the average linkage strategy if the most pure. It has 6 two-singleton clusters while the other two methods only have 5.
+
+#### Exercise 2.2-e
+```{r 2.2-e}
+fviz_dend(languages.average, main = "Cluster Average", cex = 0.4, label_cols = "black")
+```
+It looks like if we cut off the height at 125 we would get 7 clusters
+
+#### Exercise 2.2-f
+```{r 2.2-f clustering}
+languages.single7 <- eclust(languages.df, FUNcluster = "hclust", k = 7, hc_method = "single")
+languages.complete7 <- eclust(languages.df, FUNcluster = "hclust", k = 7, hc_method = "complete")
+languages.average7 <- eclust(languages.df, FUNcluster = "hclust", k = 7, hc_method = "average")
+```
+```{r 2.2-f graphing}
+fviz_dend(languages.single7, main = "Cluster Single 7", cex = 0.4, label_cols = "black")
+fviz_dend(languages.complete7, main = "Cluster Complete 7", cex = 0.4, label_cols = "black")
+fviz_dend(languages.average7, main = "Cluster Average 7", cex = 0.4, label_cols = "black")
+```
+
+#### Exercise 2.2-g
+```{r 2.2-g setup}
+library(cluster)
+library(fpc)
+
+single7.analysis <- cluster.stats(dist(languages.df), languages.single7$cluster)
+complete7.analysis <- cluster.stats(dist(languages.df), languages.complete7$cluster)
+average7.analysis <- cluster.stats(dist(languages.df), languages.average7$cluster)
+```
+#### Exercise 2.2-h
+```{r 2.2-g printing}
+single7.analysis$dunn
+
+complete7.analysis$dunn
+
+average7.analysis$dunn
+```
+Based on the Dunn index, the average clustering method is the best.
+```{r 2.2-i}
+single7.analysis$avg.silwidth
+
+complete7.analysis$avg.silwidth
+
+average7.analysis$avg.silwidth
+```
+Based on the silhouette width, the complete clustering method is the best.
+
+## Exercise 2.3
+
+#### Exercise 2.3-a
+```{r 2.3-a setup}
+UCI.df <- read.csv("HTRU_2-small.csv")
+UCI.pca <- prcomp(scale(UCI.df))
+```
+```{r}
+UCI.pca$sdev
+UCI.pca$rotation
+```
+#### Exercise 2.3-a-i
+```{r 2.3-a-i}
+total <- 2.18 + 1.48 + 0.90 + 0.71 + 0.56 + 0.51 + 0.38 + 0.13 + 0.12
+(2.18 + 1.48) / total
+```
+The cumulative variance explained by the first two variables is 52.51%
+
+#### Exercise 2.3-a-ii
+```{r 2.3-a-ii}
+library(devtools)
+install_github('sinhrks/ggfortify')
+library(ggfortify)
+library(ggplot2)
+```
+```{r 2.3-a-ii graphing}
+autoplot(UCI.pca, data = UCI.df, colour = "class")
+```
+
+#### Exercise 2.3-a-iii
+It looks like the class label is usually 0 when PC1 is >-0.01 and class 1 when PC1 is <=-0.01.
+
+## Exercise 2.3-b
+
+#### Exercise 2.3-b-i
+```{r 2.3-b-i}
+UCI.k <- kmeans(UCI.df, centers=2, nstart=50)
+fviz_cluster(UCI.k, data=UCI.df, geom="point")
+```
+
+#### Exercise 2.3-b-ii
+There seem to be a lot more points in the left cluster and this is because k means groups on spatial locality while PCA groups based on predictors. Its interesting to note that x axis and y axis labels have similar %'s
+
+#### Exercise 2.3-b-iii
+```{r 2.3-b-iii}
+table(UCI.k$cluster)
+```
+#### Exercise 2.3-b-iv
+```{r 2.3-b-iv}
+table(UCI.df$class)
+```
+#### Exercise 2.3-b-v
+I think cluster 1 is the majority class (class 0) and cluster 2 is the minority class (class 1)
+
+#### Exercise 2.3-b-vi
+```{r 2.3-b-vi}
+UCI.k.1 <- UCI.df[UCI.k$cluster==1,]
+table(UCI.k.1$class)
+```
+#### Exercise 2.3-b-vii
+I now think that Cluster 1 is the minority class (class 1) because it has a very high percentage of class 1 elements, and that cluster 2 is just a weird fraction of the majority class (class 0).
+
+#### Exercise 2.3-b-viii
+```{r 2.3-b-viii DO NOT RESTART}
+d=dist(UCI.df)
+UCI.analysis <- cluster.stats(d, UCI.k$cluster)
+```
+```{r 2.3-b-viii}
+UCI.k$betweenss / UCI.k$totss
+```
+49.44% of the variance is explained
+
+#### Exercise 2.3-b-ix
+```{r 2.3-b-ix}
+UCI.analysis$avg.silwidth
+```
+The average width is 0.59 for both clusters.
+
+#### Exercise 2.3-b-x
+```{r 2.3-b-x}
+UCI.analysis$clus.avg.silwidths
+```
+Based on this, the first cluster is better than the second cluster because it has a higher width.
+
+## Exercise 2.3-c
+```{r 2.3-c setup}
+UCI.k.pca <- kmeans(UCI.pca$x[,1:2], centers=2, nstart=50)
+```
+#### Exercise 2.3-c-i
+```{r 2.3-c-i}
+fviz_cluster(UCI.k.pca, data=UCI.df, geom="point")
+```
+This shape is very similar to the graph in part a(ii) and not very similar to b(i).
+
+#### Exercise 2.3-c-ii
+```{r 2.3-c-ii setup}
+UCI.k.pca.analysis <- cluster.stats(d, UCI.k.pca$cluster)
+```
+```{r 2.3-c-ii}
+UCI.k.pca.analysis$avg.silwidth
+```
+The average width for both clusters is 0.31
+
+#### Exercise 2.3-c-iii
+```{r 2.3-c-iii}
+UCI.k.pca.analysis$clus.avg.silwidths
+```
+Based on this information Cluster 2 is pretty good and Cluster 1 is okay to not-so-good.
+
+#### Exercise 2.3-c-iv
+The average width of the clusters is lower in exercise c by quite a bit.\n
+The width of cluster 1 got a lot worse and the width of cluster 2 improved.
+
