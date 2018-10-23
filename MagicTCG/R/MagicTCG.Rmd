@@ -1,28 +1,56 @@
 ---
 title: "MagicTCG"
-output: html_document
+output: html_notebook
+Author: Nicko Saveas
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Setup
+
+```{r setup}
+library("rjson")
+setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/Data_Mining/MagicTCG/")
+
+all_cards <- fromJSON(file="./AllSets.json")
 ```
 
-## R Markdown
+all_cards
+  set_name - each set is at this level i.e. "AKH"
+    name
+    code
+    releaseData
+    block
+    border
+    type
+    booster
+      how the booster is strucutred
+      rare
+      uncommmon
+      etc
+    mkm_name
+    mkm_id
+    cards[[1]] - each card of the set is at this level
+    cards[[2]]
+      artist
+      cmc
+      colorIdentity
+      colors
+      id
+      imageName
+      layout
+      manacost
+      multiverseid
+      name
+      number
+      power
+      rarity
+      subtext
+      types
+      toughness
+      type
+      types
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r dissecting_dataset}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
