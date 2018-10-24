@@ -10,10 +10,10 @@ Author: Nicko Saveas
 library("rjson")
 setwd("C:/Users/Nicko/Documents/School/Spring_2018/CS_422_Data_Mining/Data_Mining/MagicTCG/")
 
-all_cards <- fromJSON(file="./AllSets.json")
+all_sets <- fromJSON(file="./AllSets.json")
 ```
 
-all_cards
+all_sets
   set_name - each set is at this level i.e. "AKH"
     name
     code
@@ -35,8 +35,9 @@ all_cards
       colorIdentity
       colors
       id
-      imageName
+      name
       layout
+      legalities
       manacost
       multiverseid
       name
@@ -49,8 +50,54 @@ all_cards
       type
       types
 
-```{r dissecting_dataset}
+
+# Dissecting Amonkhet
+
+This is mostly just a test run so I can get the data in a format that is workable
+```{r dissecting_amonkhet}
+amonkhet <- all_sets$AKH
+amonkhet_cards <- amonkhet$cards
+amonkhet_card_1 <- amonkhet_cards[[1]]
+```
+
+```{r god_help_me}
+amonkhet_card_1$name
+amonkhet_card_1$type
+amonkhet_card_1$colors
+amonkhet_card_1$convertedManaCost
+amonkhet_card_1$power
+amonkhet_card_1$toughness
+amonkhet_card_1$rarity
+```
+
+```{r playing with data}
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
