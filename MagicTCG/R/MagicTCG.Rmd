@@ -54,24 +54,44 @@ all_sets
 # Dissecting Amonkhet
 
 This is mostly just a test run so I can get the data in a format that is workable
-```{r dissecting_amonkhet}
-amonkhet <- all_sets$AKH
-amonkhet_cards <- amonkhet$cards
-amonkhet_card_1 <- amonkhet_cards[[1]]
-```
 
-```{r god_help_me}
-amonkhet_card_1$name
-amonkhet_card_1$type
-amonkhet_card_1$colors
-amonkhet_card_1$convertedManaCost
-amonkhet_card_1$power
-amonkhet_card_1$toughness
-amonkhet_card_1$rarity
+```{r cleaning_trimming_and_transforming}
+# These are really the only thing about that card that I care about
+# The omitted attributes deal with legality and other things
+card_attributes <- c("name", "type", "types", "colors", "convertedManaCost",  
+                     "manaCost", "power", "toughness", "rarity", "originalText")
+
+# Create a dataframe that contains all the cards
+# Each row represents a card and each column and attribute of that card
+amonkhet_cards.df <- setNames(data.frame(matrix(ncol = length(card_attributes), nrow = 0)), card_attributes)
+
+# Iterate over all the cards in the set(s)
+#for (i in 1:length(all_sets$AKH$cards))
+#{
+  # Create an empty row that we can fill
+  amonkhet_cards.df[nrow(amonkhet_cards.df) + 1,] <- NA
+
+  # Grab the card that we want given the index so we can iterate over it
+  current_card <- all_sets$AKH$cards[[1]][card_attributes]
+  
+  # use the !is.null() fuction or the is.null() version
+
+  # Now iterate over the card attributes and put them their values
+  # into the row to populate one card (one row)
+  for (j in 1:length(card_attributes))
+  {
+    # populate the row with each of the elements
+     amonkhet_cards.df[nrow(amonkhet_cards.df), j] <- current_card[j]
+  }
+  
+#}
 ```
 
 ```{r playing with data}
 
+
+
+amonkhet_card_2 <- amonkhet$cards[[2]][card_attributes]
 ```
 
 
